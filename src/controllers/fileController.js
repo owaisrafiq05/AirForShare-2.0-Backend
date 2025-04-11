@@ -1,20 +1,40 @@
 const path = require('path');
 const fs = require('fs');
-const { getFileInfo, getPublicFiles: fetchPublicFiles, deleteFile } = require('../utils/fileUtils');
+const { getFileInfo, getPublicFiles: fetchPublicFiles, deleteFile, addFileToStore } = require('../utils/fileUtils');
 const { uploadToCloudinary, deleteFromCloudinary, getCloudinaryFileInfo } = require('../utils/cloudinaryUtils');
+const { 
+  saveFileToDb, 
+  getPublicFilesFromDb, 
+  deleteFileFromDb,
+  getFileByPublicId,
+  getAllFilesFromDb
+} = require('../utils/dbUtils');
 
 /**
  * @desc   Get all public files
  * @route  GET /api/files/public
  * @access Public
  */
-const getPublicFiles = (req, res) => {
+const getPublicFiles = async (req, res) => {
   try {
-    const files = fetchPublicFiles();
+    // Try to get files from database first
+    const dbFiles = await getPublicFilesFromDb();
+    
+    // If database is connected and returns files, use those
+    if (dbFiles && dbFiles.length > 0) {
+      return res.status(200).json({
+        success: true,
+        count: dbFiles.length,
+        data: dbFiles
+      });
+    }
+    
+    // Fallback to in-memory store if database is not available
+    const memoryFiles = fetchPublicFiles();
     res.status(200).json({
       success: true,
-      count: files.length,
-      data: files
+      count: memoryFiles.length,
+      data: memoryFiles
     });
   } catch (error) {
     console.error('Error fetching public files:', error);
@@ -44,6 +64,17 @@ const uploadPublicFile = async (req, res) => {
     
     // Get file info in a standardized format
     const fileInfo = getCloudinaryFileInfo(cloudinaryResult, req.file);
+    fileInfo.isPublic = true;
+    
+    // Add file to the in-memory store (fallback if database fails)
+    addFileToStore(fileInfo, true);
+    
+    // Save file metadata to database
+    try {
+      await saveFileToDb(fileInfo);
+    } catch (dbError) {
+      console.error('Error saving to database, using in-memory store as fallback:', dbError);
+    }
     
     res.status(201).json({
       success: true,
@@ -87,7 +118,7 @@ const getPublicFile = (req, res) => {
 
 /**
  * @desc   Delete a public file
- * @route  DELETE /api/files/public/:filename
+ * @route  DELETE /api/files/public/:publicId
  * @access Public
  */
 const deletePublicFile = async (req, res) => {
@@ -100,9 +131,19 @@ const deletePublicFile = async (req, res) => {
     if (result.result !== 'ok') {
       return res.status(404).json({
         success: false,
-        message: 'File not found or could not be deleted'
+        message: 'File not found or could not be deleted from Cloudinary'
       });
     }
+    
+    // Delete from database
+    try {
+      await deleteFileFromDb(publicId);
+    } catch (dbError) {
+      console.error('Error deleting from database:', dbError);
+    }
+    
+    // Also remove from in-memory store
+    deleteFile(publicId, true);
     
     res.status(200).json({
       success: true,
@@ -136,6 +177,17 @@ const uploadPrivateFile = async (req, res) => {
     
     // Get file info in a standardized format
     const fileInfo = getCloudinaryFileInfo(cloudinaryResult, req.file);
+    fileInfo.isPublic = false;
+    
+    // Add file to the in-memory store (fallback if database fails)
+    addFileToStore(fileInfo, false);
+    
+    // Save file metadata to database
+    try {
+      await saveFileToDb(fileInfo);
+    } catch (dbError) {
+      console.error('Error saving to database, using in-memory store as fallback:', dbError);
+    }
     
     res.status(201).json({
       success: true,
@@ -180,11 +232,36 @@ const getPrivateFile = (req, res) => {
   }
 };
 
+/**
+ * @desc   Get all files (both public and private)
+ * @route  GET /api/files/all
+ * @access Public (should be restricted in production)
+ */
+const getAllFiles = async (req, res) => {
+  try {
+    // Get all files from database
+    const files = await getAllFilesFromDb();
+    
+    res.status(200).json({
+      success: true,
+      count: files.length,
+      data: files
+    });
+  } catch (error) {
+    console.error('Error fetching all files:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching files'
+    });
+  }
+};
+
 module.exports = {
   getPublicFiles,
   uploadPublicFile,
   getPublicFile,
   deletePublicFile,
   uploadPrivateFile,
-  getPrivateFile
+  getPrivateFile,
+  getAllFiles
 }; 

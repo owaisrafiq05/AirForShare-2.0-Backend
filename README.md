@@ -25,6 +25,7 @@ Air For Share 2.0 is a peer-to-peer (P2P) file sharing system that allows users 
 - Node.js (v14 or higher)
 - npm (v6 or higher)
 - A Cloudinary account
+- MongoDB (local or Atlas)
 
 ### Installation
 
@@ -39,25 +40,31 @@ Air For Share 2.0 is a peer-to-peer (P2P) file sharing system that allows users 
    npm install
    ```
 
-3. Set up Cloudinary configuration:
+3. Create a `.env` file in the root directory and add the following:
+   ```
+   PORT=3000
+   NODE_ENV=development
+   MONGO_URI=mongodb://localhost:27017/airforshare
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   ```
+
+4. Set up Cloudinary configuration:
    - Create a Cloudinary account at [cloudinary.com](https://cloudinary.com) if you don't have one
    - Get your Cloudinary credentials (cloud name, API key, and API secret)
-   - Update the `src/config/cloudinaryConfig.js` file with your credentials:
-     ```javascript
-     module.exports = {
-       cloud_name: 'your_cloud_name',
-       api_key: 'your_api_key',
-       api_secret: 'your_api_secret',
-       secure: true
-     };
-     ```
+   - Add them to your `.env` file
 
-4. Create upload directories (for local development before Cloudinary upload):
+5. Set up MongoDB:
+   - Install MongoDB locally or create a MongoDB Atlas cluster
+   - Update the `MONGO_URI` in your `.env` file with your MongoDB connection string
+
+6. Create upload directories (for local development before Cloudinary upload):
    ```bash
    mkdir -p uploads/public uploads/private
    ```
 
-5. Start the server:
+7. Start the server:
    ```bash
    npm run dev
    ```

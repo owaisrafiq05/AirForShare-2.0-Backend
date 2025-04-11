@@ -3,6 +3,9 @@ const router = express.Router();
 const fileController = require('../controllers/fileController');
 const { publicUpload, privateUpload } = require('../utils/fileUtils');
 
+// Get all files (for debugging - includes both public and private)
+router.get('/all', fileController.getAllFiles);
+
 // Get all public files
 router.get('/public', fileController.getPublicFiles);
 

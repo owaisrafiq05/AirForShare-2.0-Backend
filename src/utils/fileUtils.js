@@ -2,6 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
+// In-memory store of uploaded files (temporary solution until database is implemented)
+// Files will be stored with their metadata
+const uploadedFiles = {
+  public: [],
+  private: []
+};
+
 // Configure storage for public files
 const publicStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -52,6 +59,22 @@ const privateUpload = multer({
   fileFilter
 });
 
+// Function to add a file to the in-memory store
+const addFileToStore = (fileInfo, isPublic = true) => {
+  const store = isPublic ? uploadedFiles.public : uploadedFiles.private;
+  
+  // Add file to the store
+  store.push({
+    ...fileInfo,
+    addedAt: new Date()
+  });
+  
+  // Sort files by addedAt date (newest first)
+  store.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+  
+  return store;
+};
+
 // Function to get file info
 const getFileInfo = (file, isPublic = true) => {
   return {
@@ -67,28 +90,16 @@ const getFileInfo = (file, isPublic = true) => {
 
 // Function to get all public files
 const getPublicFiles = () => {
-  const directoryPath = path.join(__dirname, '../../uploads/public');
-  
   try {
+    // Return files from the in-memory store instead of the file system
+    return uploadedFiles.public;
+    
     // Note: In a production environment with Cloudinary integration, 
     // you would either:
     // 1. Fetch all files from Cloudinary using their API
     // 2. Maintain a local database of uploaded files with their Cloudinary details
-    
-    const files = fs.readdirSync(directoryPath);
-    return files.map(file => {
-      const filePath = path.join(directoryPath, file);
-      const stats = fs.statSync(filePath);
-      
-      return {
-        name: file,
-        size: stats.size,
-        uploadedAt: stats.mtime,
-        url: `/uploads/public/${file}`
-      };
-    });
   } catch (error) {
-    console.error('Error reading public files directory:', error);
+    console.error('Error getting public files:', error);
     return [];
   }
 };
@@ -104,7 +115,17 @@ const deleteFile = (filename, isPublic = true) => {
   try {
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      return true;
+      
+      // Also remove from the in-memory store
+      const store = isPublic ? uploadedFiles.public : uploadedFiles.private;
+      const index = store.findIndex(file => file.name === filename || file.publicId === filename);
+      
+      if (index !== -1) {
+        store.splice(index, 1);
+        return true;
+      }
+      
+      return false;
     }
     return false;
   } catch (error) {
@@ -118,5 +139,6 @@ module.exports = {
   privateUpload,
   getFileInfo,
   getPublicFiles,
-  deleteFile
+  deleteFile,
+  addFileToStore
 }; 

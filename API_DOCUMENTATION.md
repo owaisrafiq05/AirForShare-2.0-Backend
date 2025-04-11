@@ -22,7 +22,17 @@ To use the Cloudinary integration:
 
 1. Create a Cloudinary account at [cloudinary.com](https://cloudinary.com)
 2. Get your Cloudinary credentials (cloud name, API key, and API secret)
-3. Update the `src/config/cloudinaryConfig.js` file with your credentials
+3. Add them to your `.env` file
+
+## MongoDB Integration
+
+This API uses MongoDB to store file metadata, which provides:
+
+- Persistent storage of file information
+- Automatic cleanup of old files (TTL feature)
+- Efficient querying of file information
+
+Files in the system have a Time-To-Live (TTL) of 1 hour. After this period, the file metadata will be automatically removed from the database. This ensures that the system doesn't accumulate unnecessary file references over time.
 
 ## API Endpoints
 

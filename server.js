@@ -4,6 +4,13 @@ const socketIo = require("socket.io");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
+const dotenv = require("dotenv");
+
+// Load environment variables
+dotenv.config();
+
+// Database connection
+const connectDB = require("./src/config/dbConfig");
 
 // Route imports
 const fileRoutes = require("./src/routes/fileRoutes");
@@ -34,6 +41,11 @@ const io = socketIo(server, {
     methods: ["GET", "POST"]
   }
 });
+
+// Connect to MongoDB
+connectDB()
+  .then(() => console.log('MongoDB connected successfully'))
+  .catch(err => console.error('Could not connect to MongoDB:', err));
 
 // Middleware
 app.use(cors());
