@@ -256,6 +256,48 @@ const getAllFiles = async (req, res) => {
   }
 };
 
+/**
+ * @desc   Delete a private file
+ * @route  DELETE /api/files/private/:publicId
+ * @access Public
+ */
+const deletePrivateFile = async (req, res) => {
+  try {
+    const publicId = req.params.publicId;
+    
+    // Delete file from Cloudinary
+    const result = await deleteFromCloudinary(publicId);
+    
+    if (result.result !== 'ok') {
+      return res.status(404).json({
+        success: false,
+        message: 'File not found or could not be deleted from Cloudinary'
+      });
+    }
+    
+    // Delete from database
+    try {
+      await deleteFileFromDb(publicId);
+    } catch (dbError) {
+      console.error('Error deleting from database:', dbError);
+    }
+    
+    // Also remove from in-memory store
+    deleteFile(publicId, false);
+    
+    res.status(200).json({
+      success: true,
+      message: 'File deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting private file:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while deleting file'
+    });
+  }
+};
+
 module.exports = {
   getPublicFiles,
   uploadPublicFile,
@@ -263,5 +305,6 @@ module.exports = {
   deletePublicFile,
   uploadPrivateFile,
   getPrivateFile,
-  getAllFiles
+  getAllFiles,
+  deletePrivateFile
 }; 

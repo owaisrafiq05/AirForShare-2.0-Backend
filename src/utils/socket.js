@@ -97,10 +97,11 @@ module.exports = (io) => {
       const user = connectedUsers.get(socket.id);
       if (!user || !user.username) return;
       
-      // Broadcast file information to room
-      io.to(roomId).emit('newFile', {
+      // Broadcast file information to room as a message type
+      io.to(roomId).emit('message', {
         user: { id: socket.id, username: user.username },
-        fileInfo,
+        message: fileInfo.message || '', // Include any message text that was sent along with the file
+        fileInfo: fileInfo,
         time: new Date()
       });
     });

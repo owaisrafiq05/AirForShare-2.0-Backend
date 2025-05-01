@@ -24,4 +24,7 @@ router.post('/private/upload', privateUpload.single('file'), fileController.uplo
 // Get a private file by filename - this route is obsolete for Cloudinary but kept for backwards compatibility
 router.get('/private/:filename', fileController.getPrivateFile);
 
+// Delete a private file using publicId
+router.delete('/private/:publicId', fileController.deletePrivateFile);
+
 module.exports = router; 
